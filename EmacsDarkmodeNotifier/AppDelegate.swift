@@ -1,30 +1,46 @@
-//
-//  AppDelegate.swift
-//  EmacsDarkmodeNotifier
-//
-//  Created by Ashton Scott Baker on 2023-10-12.
-//
-
 import Cocoa
+import ScriptingBridge
 
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
-
+    var observation: NSKeyValueObservation?
     
-
-
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        // Insert code here to initialize your application
+        print("Application did finish launching.")
+        
+        observation = NSApp.observe(\.effectiveAppearance) { (app, _) in
+            app.effectiveAppearance.performAsCurrentDrawingAppearance {
+                print("Notification received.")
+
+                // Invoke your non-view code that needs to be aware of the
+                // change in appearance.
+                print("Dark mode detected, setting dark mode in emacs.")
+
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/Users/ashton/.nix-profile/bin/emacsclient")
+                
+                let appearanceDescription = app.effectiveAppearance.debugDescription.lowercased()
+
+                if appearanceDescription.contains("darkaqua") {
+                    print("Dark mode detected, setting dark mode in emacs.")
+                    task.arguments = ["-e", "(set-ui-mode 'dark)"]
+                } else {
+                    print("Light mode detected, setting light mode in emacs.")
+                    task.arguments = ["-e", "(set-ui-mode 'light)"]
+                }
+
+                do {
+                    try task.run()
+                    task.waitUntilExit()  // This is synchronous; replace it with appropriate code for async
+                    if task.terminationStatus == 0 {
+                        print("Successfully changed emacs mode to dark.")
+                    } else {
+                        print("Failed to change emacs mode.")
+                    }
+                } catch {
+                    print("An error occurred: \(error)")
+                }
+            }
+        }
     }
-
-    func applicationWillTerminate(_ aNotification: Notification) {
-        // Insert code here to tear down your application
-    }
-
-    func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
-        return true
-    }
-
-
 }
-
